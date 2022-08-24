@@ -3,8 +3,7 @@
 from __future__ import unicode_literals
 
 AUTHOR = 'Daniel Bungert'
-SITENAME = "Notes from dbungert"
-# SITEURL = 'https://dbungert.github.io'
+SITENAME = 'Notes from dbungert'
 SITEURL = ''
 
 PATH = 'content'
