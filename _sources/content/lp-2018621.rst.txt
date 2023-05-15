@@ -1,0 +1,76 @@
+
+.. post:: May 15, 2023
+   :author: Dan Bungert
+
+Bug report analysis: /boot should not be vfat
+=============================================
+
+I've been meaning to get a blog running about Autoinstall, to help jot down
+some observations about doing automated Subiquity and Ubuntu Desktop Installer
+while things are fresh and before things find their way to proper formal
+documentation locations.
+
+To start that process, in looking at
+LP: #\ `2018621 <https://pad.lv/2018621>`__\ :
+
+A simplified snippet of that autoinstall:
+
+.. code-block:: yaml
+
+    # invalid, do not use as-is
+    storage:
+      config:
+      - {ptable: gpt, grub_device: true, id: disk-sda, type: disk, wipe: superblock-recursive, match: { "size": "largest" }}
+      # BIOS compat
+      - {device: disk-sda, id: partition-1, number: 1, flag: bios_grub, size: 1MB, type: partition}
+      # /boot
+      - {device: disk-sda, id: partition-2, number: 2, wipe: superblock, flag: boot, preserve: false, grub_device: false, type: partition, size: 1000MB}
+      # fstype: ext4 works, vfat fails
+      - {fstype: vfat, volume: partition-2, preserve: false, type: format, id: format-11}
+      - {device: format-11, path: /boot, type: mount, id: mount-11}
+      # /boot/efi
+      - {device: disk-sda, id: partition-3, number: 3, preserve: false, grub_device: true, type: partition, size: 512MB, flag: bios_grub}
+      - {fstype: vfat, volume: partition-3, preserve: false, type: format, id: format-12}
+      - {device: format-12, path: /boot/efi, type: mount, id: mount-12}
+      # /
+      - {device: disk-sda, id: partition-4, number: 4, wipe: superblock, size: -1, flag: '', preserve: false, grub_device: false, type: partition}
+      - {fstype: xfs, volume: partition-4, preserve: false, type: format, id: format-10}
+      - {device: format-10, path: /, type: mount, id: mount-21}
+
+The reported problem is a failure at kernel install time.
+Changing :code:`/boot` to :code:`fstype: ext4` is sufficient to address the
+kernel install.
+
+Other observations:
+
+- :code:`/boot` is suggested to be larger.  Foundations recommendations for
+  :code:`/boot` are a hefty 1.75GiB to 2GiB, to make room for multiple kernel
+  versions being installed at a time and for forward compatibility.
+
+- Curtin doesn't support hybrid BIOS compat + EFI yet, and I'm not sure offhand
+  the effect of having the BIOS compat in place.  For an EFI boot system, I
+  believe this is nothing more than 1MiB of unused space and a longer
+  storage config section but probably harmless otherwise.
+
+- The :code:`bios_grub` is meant for BIOS compat partition, so can be dropped
+  from the ESP.
+
+Here is a version with my suggested fixes:
+
+.. code-block:: yaml
+
+    storage:
+      config:
+      - {ptable: gpt, grub_device: true, id: disk-sda, type: disk, wipe: superblock-recursive, match: { "size": "largest" }}
+      # /boot
+      - {device: disk-sda, id: partition-1, number: 1, wipe: superblock, flag: boot, preserve: false, grub_device: false, type: partition, size: 2GB}
+      - {fstype: ext4, volume: partition-1, preserve: false, type: format, id: format-11}
+      - {device: format-11, path: /boot, type: mount, id: mount-11}
+      # /boot/efi
+      - {device: disk-sda, id: partition-2, number: 2, preserve: false, grub_device: true, type: partition, size: 512MB}
+      - {fstype: vfat, volume: partition-2, preserve: false, type: format, id: format-12}
+      - {device: format-12, path: /boot/efi, type: mount, id: mount-12}
+      # /
+      - {device: disk-sda, id: partition-3, number: 3, wipe: superblock, size: -1, flag: '', preserve: false, grub_device: false, type: partition}
+      - {fstype: xfs, volume: partition-3, preserve: false, type: format, id: format-10}
+      - {device: format-10, path: /, type: mount, id: mount-21}

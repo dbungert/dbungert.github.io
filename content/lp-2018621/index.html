@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Bug report analysis: /boot should not be vfat &#8212; Autoinstall and presumably other things  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../../genindex/" />
+    <link rel="search" title="Search" href="../../search/" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+
+
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+<section id="bug-report-analysis-boot-should-not-be-vfat">
+<h1>Bug report analysis: /boot should not be vfat<a class="headerlink" href="#bug-report-analysis-boot-should-not-be-vfat" title="Permalink to this heading">¶</a></h1>
+<p>I’ve been meaning to get a blog running about Autoinstall, to help jot down
+some observations about doing automated Subiquity and Ubuntu Desktop Installer
+while things are fresh and before things find their way to proper formal
+documentation locations.</p>
+<p>To start that process, in looking at
+LP: #<a class="reference external" href="https://pad.lv/2018621">2018621</a>:</p>
+<p>A simplified snippet of that autoinstall:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># invalid, do not use as-is</span>
+<span class="nt">storage</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ptable</span><span class="p">:</span><span class="w"> </span><span class="nv">gpt</span><span class="p p-Indicator">,</span><span class="nt"> grub_device</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">disk-sda</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">disk</span><span class="p p-Indicator">,</span><span class="nt"> wipe</span><span class="p">:</span><span class="w"> </span><span class="nv">superblock-recursive</span><span class="p p-Indicator">,</span><span class="nt"> match</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="w"> </span><span class="s">&quot;size&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;largest&quot;</span><span class="w"> </span><span class="p p-Indicator">}}</span>
+<span class="w">  </span><span class="c1"># BIOS compat</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">disk-sda</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-1</span><span class="p p-Indicator">,</span><span class="nt"> number</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="nt"> flag</span><span class="p">:</span><span class="w"> </span><span class="nv">bios_grub</span><span class="p p-Indicator">,</span><span class="nt"> size</span><span class="p">:</span><span class="w"> </span><span class="nv">1MB</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">partition</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="c1"># /boot</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">disk-sda</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-2</span><span class="p p-Indicator">,</span><span class="nt"> number</span><span class="p">:</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="nt"> wipe</span><span class="p">:</span><span class="w"> </span><span class="nv">superblock</span><span class="p p-Indicator">,</span><span class="nt"> flag</span><span class="p">:</span><span class="w"> </span><span class="nv">boot</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> grub_device</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">partition</span><span class="p p-Indicator">,</span><span class="nt"> size</span><span class="p">:</span><span class="w"> </span><span class="nv">1000MB</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="c1"># fstype: ext4 works, vfat fails</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">fstype</span><span class="p">:</span><span class="w"> </span><span class="nv">vfat</span><span class="p p-Indicator">,</span><span class="nt"> volume</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-2</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">format</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">format-11</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">format-11</span><span class="p p-Indicator">,</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">/boot</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">mount</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">mount-11</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="c1"># /boot/efi</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">disk-sda</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-3</span><span class="p p-Indicator">,</span><span class="nt"> number</span><span class="p">:</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> grub_device</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">partition</span><span class="p p-Indicator">,</span><span class="nt"> size</span><span class="p">:</span><span class="w"> </span><span class="nv">512MB</span><span class="p p-Indicator">,</span><span class="nt"> flag</span><span class="p">:</span><span class="w"> </span><span class="nv">bios_grub</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">fstype</span><span class="p">:</span><span class="w"> </span><span class="nv">vfat</span><span class="p p-Indicator">,</span><span class="nt"> volume</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-3</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">format</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">format-12</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">format-12</span><span class="p p-Indicator">,</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">/boot/efi</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">mount</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">mount-12</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="c1"># /</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">disk-sda</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-4</span><span class="p p-Indicator">,</span><span class="nt"> number</span><span class="p">:</span><span class="w"> </span><span class="nv">4</span><span class="p p-Indicator">,</span><span class="nt"> wipe</span><span class="p">:</span><span class="w"> </span><span class="nv">superblock</span><span class="p p-Indicator">,</span><span class="nt"> size</span><span class="p">:</span><span class="w"> </span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="nt"> flag</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;&#39;</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> grub_device</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">partition</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">fstype</span><span class="p">:</span><span class="w"> </span><span class="nv">xfs</span><span class="p p-Indicator">,</span><span class="nt"> volume</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-4</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">format</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">format-10</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">format-10</span><span class="p p-Indicator">,</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">/</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">mount</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">mount-21</span><span class="p p-Indicator">}</span>
+</pre></div>
+</div>
+<p>The reported problem is a failure at kernel install time.
+Changing <code class="code docutils literal notranslate"><span class="pre">/boot</span></code> to <code class="code docutils literal notranslate"><span class="pre">fstype:</span> <span class="pre">ext4</span></code> is sufficient to address the
+kernel install.</p>
+<p>Other observations:</p>
+<ul class="simple">
+<li><p><code class="code docutils literal notranslate"><span class="pre">/boot</span></code> is suggested to be larger.  Foundations recommendations for
+<code class="code docutils literal notranslate"><span class="pre">/boot</span></code> are a hefty 1.75GiB to 2GiB, to make room for multiple kernel
+versions being installed at a time and for forward compatibility.</p></li>
+<li><p>Curtin doesn’t support hybrid BIOS compat + EFI yet, and I’m not sure offhand
+the effect of having the BIOS compat in place.  For an EFI boot system, I
+believe this is nothing more than 1MiB of unused space and a longer
+storage config section but probably harmless otherwise.</p></li>
+<li><p>The <code class="code docutils literal notranslate"><span class="pre">bios_grub</span></code> is meant for BIOS compat partition, so can be dropped
+from the ESP.</p></li>
+</ul>
+<p>Here is a version with my suggested fixes:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">storage</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">ptable</span><span class="p">:</span><span class="w"> </span><span class="nv">gpt</span><span class="p p-Indicator">,</span><span class="nt"> grub_device</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">disk-sda</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">disk</span><span class="p p-Indicator">,</span><span class="nt"> wipe</span><span class="p">:</span><span class="w"> </span><span class="nv">superblock-recursive</span><span class="p p-Indicator">,</span><span class="nt"> match</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="w"> </span><span class="s">&quot;size&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;largest&quot;</span><span class="w"> </span><span class="p p-Indicator">}}</span>
+<span class="w">  </span><span class="c1"># /boot</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">disk-sda</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-1</span><span class="p p-Indicator">,</span><span class="nt"> number</span><span class="p">:</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="nt"> wipe</span><span class="p">:</span><span class="w"> </span><span class="nv">superblock</span><span class="p p-Indicator">,</span><span class="nt"> flag</span><span class="p">:</span><span class="w"> </span><span class="nv">boot</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> grub_device</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">partition</span><span class="p p-Indicator">,</span><span class="nt"> size</span><span class="p">:</span><span class="w"> </span><span class="nv">2GB</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">fstype</span><span class="p">:</span><span class="w"> </span><span class="nv">ext4</span><span class="p p-Indicator">,</span><span class="nt"> volume</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-1</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">format</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">format-11</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">format-11</span><span class="p p-Indicator">,</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">/boot</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">mount</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">mount-11</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="c1"># /boot/efi</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">disk-sda</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-2</span><span class="p p-Indicator">,</span><span class="nt"> number</span><span class="p">:</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> grub_device</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">partition</span><span class="p p-Indicator">,</span><span class="nt"> size</span><span class="p">:</span><span class="w"> </span><span class="nv">512MB</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">fstype</span><span class="p">:</span><span class="w"> </span><span class="nv">vfat</span><span class="p p-Indicator">,</span><span class="nt"> volume</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-2</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">format</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">format-12</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">format-12</span><span class="p p-Indicator">,</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">/boot/efi</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">mount</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">mount-12</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="c1"># /</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">disk-sda</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-3</span><span class="p p-Indicator">,</span><span class="nt"> number</span><span class="p">:</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="nt"> wipe</span><span class="p">:</span><span class="w"> </span><span class="nv">superblock</span><span class="p p-Indicator">,</span><span class="nt"> size</span><span class="p">:</span><span class="w"> </span><span class="nv">-1</span><span class="p p-Indicator">,</span><span class="nt"> flag</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;&#39;</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> grub_device</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">partition</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">fstype</span><span class="p">:</span><span class="w"> </span><span class="nv">xfs</span><span class="p p-Indicator">,</span><span class="nt"> volume</span><span class="p">:</span><span class="w"> </span><span class="nv">partition-3</span><span class="p p-Indicator">,</span><span class="nt"> preserve</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">format</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">format-10</span><span class="p p-Indicator">}</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="nv">format-10</span><span class="p p-Indicator">,</span><span class="nt"> path</span><span class="p">:</span><span class="w"> </span><span class="nv">/</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">mount</span><span class="p p-Indicator">,</span><span class="nt"> id</span><span class="p">:</span><span class="w"> </span><span class="nv">mount-21</span><span class="p p-Indicator">}</span>
+</pre></div>
+</div>
+</section>
+
+<div class="section ablog__blog_comments">
+  
+  
+
+
+<div class="section ablog__prev-next">
+  <span class="ablog__prev">
+    
+  </span>
+  <span class="ablog__spacer">&nbsp;</span>
+  <span class="ablog__next">
+    
+  </span>
+</div>
+
+  
+  
+</div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div class="ablog-sidebar-item ablog__postcard">
+
+
+<h2>
+  
+  
+  15 May 2023
+  
+</h2>
+<ul>
+  
+
+<li id="ablog-sidebar-item author ablog__author">
+  <span>
+    
+    Author:
+    
+    </span>
+  
+  
+  <a href="../author/dan-bungert/">Dan Bungert</a>
+  
+  
+  
+</li>
+
+
+
+
+
+
+</ul>
+</div>
+<h3>Navigation</h3>
+
+
+<div class="ablog-sidebar-item ablog__recentposts">
+<h3>
+  <a href="../">Recent Posts</a>
+</h3>
+<ul>
+  
+  
+</ul>
+</div>
+
+<div class="ablog-sidebar-item ablog__archive">
+<h3>
+  <a href="../archive/">Archives</a>
+</h3>
+<ul>
+  
+  
+  <li>
+    <a href="../2023/">2023 (1)</a>
+  </li>
+  
+  
+</ul>
+</div>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search/" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2003 Dan Bungert, speaking for myself, opinions are my own.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.0.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../../_sources/content/lp-2018621.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

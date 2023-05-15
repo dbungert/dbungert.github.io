@@ -1,0 +1,7 @@
+Autoinstall and other stuff presumably
+==============================================================================
+
+Recent posts:
+
+.. postlist:: 5
+   :excerpts:
